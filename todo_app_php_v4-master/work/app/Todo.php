@@ -26,7 +26,9 @@ class Todo
                     echo json_encode(['id' => $id]);
                     break;
                 case 'toggle':
-                    $this->toggle();
+                    $isDone = $this->toggle();
+                    header('Content-Type: application/json');
+                    echo json_encode(['is_done' => $isDone]);
                     break;
                 case 'delete':
                     $this->delete();
@@ -62,9 +64,23 @@ class Todo
             return;
         }
 
+        //
+        $stmt = $this->pdo->prepare("SELECT * FROM todos WHERE id = :id");
+        $stmt->bindValue('id', $id, \PDO::PARAM_INT);
+        $stmt->execute();
+        $todo = $stmt->fetch();
+        //todoが空だったら（既に削除されていたら）404エラーを返す
+        if(empty($todo)) {
+            header('HTTP', true, 404);
+            exit;
+        }
+
         $stmt = $this->pdo->prepare("UPDATE todos SET is_done = NOT is_done WHERE id = :id");
         $stmt->bindValue('id', $id, \PDO::PARAM_INT);
         $stmt->execute();
+        //sql実行後のis_doneの値(true or false)を取得する
+        //fetchで取得した$todoのis_doneの値を反転させたものと等しい
+        return (boolean) !$todo->is_done;
     }
 
 
